@@ -5,12 +5,14 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <chrono>
 
 int CUR_PRIME = 2;
 long TABLE_SIZE = 0;
+int INDICES = 0;
 
 // sets next prime number after CUR_PRIME
-void get_net_prime() {
+void get_next_prime() {
     int isPrime = 0;
     CUR_PRIME++;
     int num = CUR_PRIME;
@@ -60,16 +62,29 @@ unsigned long doublehash(int k, int i) {
     return hash;
 }
 
+// double double hash
+/*
+unsigned long ddhash(int[] hash_arr, int k, int i) {
+    unsigned long hash1 = doublehash(k, i);
+    unsigned long hash2 = doublehash(k, i+1);
+    hash_arr[0] = hash1;
+    hash_arr[1] = hash2;
+}
+    */
+
 // -------------------- Bit Array functions
 
 // inserts single hash value into bit array to flip bit
 void bit_insert(int* arr, unsigned long val) {
-    arr[val] = 1;
+    if (arr[val] == 0) {
+        arr[val] = 1;
+    }
 }
 
 // checks whole bit array for given hash
 int bit_query(int* arr, std::string hash_val) {
         
+
     int quarter = hash_val.size() / 4;
     std::string q1_hex = hash_val.substr(0,quarter);
     std::string q2_hex = hash_val.substr(quarter,quarter);
@@ -81,17 +96,22 @@ int bit_query(int* arr, std::string hash_val) {
     unsigned long long q3_int = stoull(q3_hex,nullptr,16);
     unsigned long long q4_int = stoull(q4_hex,nullptr,16);
 
-    unsigned long q1_hash = doublehash(q1_int, 1);
-    unsigned long q2_hash = doublehash(q2_int, 1);
-    unsigned long q3_hash = doublehash(q3_int, 1);
-    unsigned long q4_hash = doublehash(q4_int, 1);
+    unsigned long q1_index = doublehash(q1_int, 1);
+    unsigned long q2_index = doublehash(q2_int, 1);
+    unsigned long q3_index = doublehash(q3_int, 1);
+    unsigned long q4_index = doublehash(q4_int, 1);
+    unsigned long q5_index = doublehash(q1_int, 2);
+    unsigned long q6_index = doublehash(q2_int, 2);
+    unsigned long q7_index = doublehash(q3_int, 2);
+    unsigned long q8_index = doublehash(q4_int, 2);
 
-    int hash_found = 0;
-    if (arr[q1_hash] & arr[q2_hash] & arr[q3_hash] & arr[q4_hash]) {
-        hash_found = 1;
+    if (!(arr[q1_index] & arr[q2_index] & arr[q3_index] & arr[q4_index] & arr[q5_index] & arr[q6_index] & arr[q7_index] & arr[q8_index])) {
+        // hash found as all 0s, return immediately
+        return 0;
     }
 
-    return hash_found;
+    // hash not found as all 0s
+    return 1;
 }
 
 // --------------------  Main workflow
@@ -114,11 +134,14 @@ int main(int argc, char *argv[]) {
 
     // Sizing filter calculations
     long n = 500000;
-    float p = 0.01;     // change to 0.02 if splitting line
+    float p = 0.005;     // change to 0.02 if splitting line
 
     long m = ( (-1 * n) * std::log(p) ) / pow(std::log(2), 2);
-    TABLE_SIZE = m;
     int k = std::round((m/n)*std::log(2));
+        // set globals
+    TABLE_SIZE = m;
+    INDICES = k;
+    std::cout << "k = " << k << std::endl;
 
     // init bit array and fill with zeroes
     int* bit_array = new int[m];
@@ -130,6 +153,8 @@ int main(int argc, char *argv[]) {
 
     // loop through every line of dataset
     std::string line = "";
+        // testing count variables
+        int attempt_count = 0;
     while (std::getline(dataset, line, ':')) {
         //std::cout << line << std::endl; 
         
@@ -148,34 +173,47 @@ int main(int argc, char *argv[]) {
         // run double hash and fill bit array
         int new_hash = 0;
         int attempts = 1;
-        while (new_hash == 0) {
+        //
+        while (new_hash < 1) {
+            //std::cout << "new_hash = " << new_hash << std::endl;
             if(attempts > 1) { 
                 //std::cout << "attempts = " << attempts << std::endl;
             }
-            unsigned long q1_hash = doublehash(q1_int, attempts);
-            unsigned long q2_hash = doublehash(q2_int, attempts);
-            unsigned long q3_hash = doublehash(q3_int, attempts);
-            unsigned long q4_hash = doublehash(q4_int, attempts);
+            // get 8 indeces
+            unsigned long q1_index = doublehash(q1_int, attempts);
+            unsigned long q2_index = doublehash(q2_int, attempts);
+            unsigned long q3_index = doublehash(q3_int, attempts);
+            unsigned long q4_index = doublehash(q4_int, attempts);
+            unsigned long q5_index = doublehash(q1_int, attempts+1);
+            unsigned long q6_index = doublehash(q2_int, attempts+1);
+            unsigned long q7_index = doublehash(q3_int, attempts+1);
+            unsigned long q8_index = doublehash(q4_int, attempts+1);
+            attempt_count++;
 
-            if (bit_array[q1_hash] & bit_array[q2_hash] & bit_array[q3_hash] & bit_array[q4_hash]) {
+            // check if indeces have already been entered in bit array
+            if (bit_array[q1_index] & bit_array[q2_index] & bit_array[q3_index] & bit_array[q4_index] & bit_array[q5_index] & bit_array[q6_index] & bit_array[q7_index] & bit_array[q8_index]) {
                 // not new hash
                 attempts++;
             } else {
-                bit_insert(bit_array, q1_hash);
-                bit_insert(bit_array, q2_hash);
-                bit_insert(bit_array, q3_hash);
-                bit_insert(bit_array, q4_hash);
-                new_hash = 1;
-
+                bit_insert(bit_array, q1_index);
+                bit_insert(bit_array, q2_index);
+                bit_insert(bit_array, q3_index);
+                bit_insert(bit_array, q4_index);
+                bit_insert(bit_array, q5_index);
+                bit_insert(bit_array, q6_index);
+                bit_insert(bit_array, q7_index);
+                bit_insert(bit_array, q8_index);
+                new_hash++;
             }
         }
-
         // extra getline to get rid of extra value
         std::getline(dataset, line);
     }
 
     std::cout << "Closing training dataset\n" << std::endl;
     dataset.close();
+
+    std::cout << "attempt_count = " << attempt_count << std::endl;
 
     std::ifstream test_dataset(testing_file);
     if (!test_dataset.is_open()) {
@@ -184,26 +222,41 @@ int main(int argc, char *argv[]) {
     }
     std::cout << "Testing file opened successfully" << std::endl;
 
-    // loop while
     float false_pos = 0;
+    int query_count = 0;
+    auto start = std::chrono::steady_clock::now();
+    auto end = std::chrono::steady_clock::now();
+
+    // loop through testing dataset
     while (std::getline(test_dataset, line, ':')) {
         int temp_query = bit_query(bit_array, line);
         if (temp_query == 1) {
             false_pos++;
         }
-
+        query_count++;
         std::getline(test_dataset, line);
+        if (query_count == 1000) {
+            end = std::chrono::steady_clock::now();
+        }
     }
 
+    // report false positive rate
     std::cout << "False positives = " << false_pos << std::endl;
     std::cout << "n = " << n << std::endl;
     float false_pos_rate = (false_pos / float(n)) * 100;
     std::cout << "False positive rate = " << false_pos_rate << "%" << std::endl;
 
-    std::cout << "Closing testing dataset" << std::endl;
+    // report query timing
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    std::cout << "Query for 1,000 keys took: " << duration.count() << " microseconds" << std::endl;
+    double query_s = duration.count() / 1e6;
+    std::cout << "                  or " << query_s << " seconds" << std::endl;
+
+    // close testing file
     test_dataset.close();
+    std::cout << "Closed testing dataset" << std::endl;
 
-
+    // free memory
     delete[] bit_array;
 
     std::cout << "--------------" << std::endl;
