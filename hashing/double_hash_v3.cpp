@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include <cmath>
-#include <chrono>
+#include <ctime>
 
 int CUR_PRIME = 2;
 long TABLE_SIZE = 0;
@@ -117,31 +117,23 @@ int bit_query(int* arr, std::string hash_val) {
 // --------------------  Main workflow
 
 int main(int argc, char *argv[]) {
-    std::cout << "---------------" << std::endl;
+    std::cout << "---------------\nPassword Breach Checker" << std::endl;
 
-    // get dataset(s)
-    std::string training_file = "../dataset/pwnedpasswords_500k_pos.txt";
-    std::string testing_file = "../dataset/pwnedpasswords_500k_neg.txt";
-
-    // open dataset
-    std::ifstream dataset(training_file);
-    if (!dataset.is_open()) {
-        std::cout << "Error opening file" << std::endl;
-        return 1;
-    }
-    std::cout << "File opened successfully" << std::endl;
-
+    // dataset filt paths
+    std::string training_file = "./pwnedpasswords_500k_pos.txt";
+    std::string testing_file = "./pwnedpasswords_500k_neg.txt";
 
     // Sizing filter calculations
-    long n = 500000;
-    float p = 0.005;     // change to 0.02 if splitting line
-
-    long m = ( (-1 * n) * std::log(p) ) / pow(std::log(2), 2);
-    int k = std::round((m/n)*std::log(2));
+    long n = 500000;    // number of items to insert
+    float p = 0.005;    // target false positive rate
+    long m = ( (-1 * n) * std::log(p) ) / pow(std::log(2), 2);  // number of bits in bir array
+    int k = std::round((m/n)*std::log(2));                      // number of times we'll run through double hash
         // set globals
     TABLE_SIZE = m;
     INDICES = k;
-    std::cout << "k = " << k << std::endl;
+    std::cout << "Filter Sizing:"
+    std::cout << "n = " << n << ", p = " << p << std::endl;
+    std::cout << "m = " << m << ", k = " << k << std::endl;
 
     // init bit array and fill with zeroes
     int* bit_array = new int[m];
@@ -150,6 +142,15 @@ int main(int argc, char *argv[]) {
     }
     
     int count = 0;
+
+    // open training dataset
+    std::ifstream dataset(training_file);
+    if (!dataset.is_open()) {
+        std::cout << "Error opening file" << std::endl;
+        return 1;
+    }
+    std::cout << "File opened successfully" << std::endl;
+
 
     // loop through every line of dataset
     std::string line = "";
@@ -224,8 +225,13 @@ int main(int argc, char *argv[]) {
 
     float false_pos = 0;
     int query_count = 0;
-    auto start = std::chrono::steady_clock::now();
-    auto end = std::chrono::steady_clock::now();
+    //auto start = std::chrono::steady_clock::now();
+    //std::time_t start = std::time(0); 
+    std::clock_t start = std::clock();
+    //auto end = std::chrono::steady_clock::now();
+    double query_time_array[m/1000];
+    int key_count = 0;
+    double query_sum = 0;
 
     // loop through testing dataset
     while (std::getline(test_dataset, line, ':')) {
@@ -236,7 +242,15 @@ int main(int argc, char *argv[]) {
         query_count++;
         std::getline(test_dataset, line);
         if (query_count == 1000) {
-            end = std::chrono::steady_clock::now();
+            //std::time_t end = std::time(0);
+            std::clock_t end = std::clock();
+            //double elapsed = std::difftime(end, start);
+            double elapsed = static_cast<double>(end - start) / CLOCKS_PER_SEC;
+            query_sum += elapsed;
+            key_count++;
+            query_count = 0;
+            //start = std::time(0);
+            start = std::clock();
         }
     }
 
@@ -247,10 +261,12 @@ int main(int argc, char *argv[]) {
     std::cout << "False positive rate = " << false_pos_rate << "%" << std::endl;
 
     // report query timing
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    std::cout << "Query for 1,000 keys took: " << duration.count() << " microseconds" << std::endl;
-    double query_s = duration.count() / 1e6;
-    std::cout << "                  or " << query_s << " seconds" << std::endl;
+    //auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    double query_avg = query_sum / key_count;
+    std::cout << "----- timing check;\nquery_sum = " << query_sum << "\nkey_count = " << key_count << std::endl;
+    std::cout << "Query for 1,000 keys took: " << query_avg << " seconds on avg" << std::endl;
+    //double query_s = duration.count() / 1e6;
+    //std::cout << "                  or " << query_s << " seconds" << std::endl;
 
     // close testing file
     test_dataset.close();

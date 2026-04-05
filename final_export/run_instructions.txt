@@ -1,0 +1,16 @@
+### Instructions on how to run code
+
+# NOTE: All code should be compiled and run on a typical C++ compatible terminal, such as:
+# Ubuntu, MacOS, or Windows (with Cygwin or WSL)
+
+## 3-way Merge Sort:
+# Compile code
+g++ threeway_merge_sort.cpp -o threeway_merge_sort
+# Run code
+./threeway_merge_sort
+
+## Password Breach Checker:
+# Compile code
+g++ password_breach_checker.cpp -o password_breach_checker
+# Run code
+./password_breach_checker
